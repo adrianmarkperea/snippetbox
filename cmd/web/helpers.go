@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 func (a *application) serverError(w http.ResponseWriter, r *http.Request, err error) {
@@ -40,4 +41,10 @@ func (a *application) render(w http.ResponseWriter, r *http.Request, status int,
 	w.WriteHeader(status)
 
 	buf.WriteTo(w)
+}
+
+func (a *application) newTemplateData(r *http.Request) templateData {
+	return templateData{
+		CurrentYear: time.Now().Year(),
+	}
 }
