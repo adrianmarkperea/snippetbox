@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 )
@@ -18,7 +19,7 @@ func commonHeaders(next http.Handler) http.Handler {
 	})
 }
 
-func (app *application) logRequest(next http.Handler) http.Handler {
+func (a *application) logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			ip     = r.RemoteAddr
@@ -27,7 +28,20 @@ func (app *application) logRequest(next http.Handler) http.Handler {
 			uri    = r.URL.RequestURI()
 		)
 
-		app.logger.Info("received request", slog.String("ip", ip), slog.String("proto", proto), slog.String("method", method), slog.String("uri", uri))
+		a.logger.Info("received request", slog.String("ip", ip), slog.String("proto", proto), slog.String("method", method), slog.String("uri", uri))
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (a *application) recoverPanic(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				w.Header().Set("Connection", "close")
+				a.serverError(w, r, fmt.Errorf("%s", err))
+			}
+		}()
 
 		next.ServeHTTP(w, r)
 	})
