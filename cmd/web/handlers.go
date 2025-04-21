@@ -71,7 +71,7 @@ func (a *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) 
 
 	form := snippetCreateForm{
 		Title:   r.PostForm.Get("title"),
-		Content: r.PostForm.Get("Content"),
+		Content: r.PostForm.Get("content"),
 		Expires: expires,
 	}
 

@@ -1,9 +1,12 @@
 package models
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Snippet struct {
@@ -15,7 +18,7 @@ type Snippet struct {
 }
 
 type SnippetModel struct {
-	DB *sql.DB
+	DB *pgxpool.Pool
 }
 
 func (m *SnippetModel) Insert(title string, content string, expires int) (int, error) {
@@ -24,7 +27,7 @@ func (m *SnippetModel) Insert(title string, content string, expires int) (int, e
 		      RETURNING id`
 
 	var id int
-	err := m.DB.QueryRow(stmt, title, content, expires).Scan(&id)
+	err := m.DB.QueryRow(context.Background(), stmt, title, content, expires).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -38,7 +41,7 @@ func (m *SnippetModel) Get(id int) (Snippet, error) {
 
 	var s Snippet
 
-	if err := m.DB.QueryRow(stmt, id).Scan(&s.ID, &s.Title, &s.Content, &s.Created, &s.Expires); err != nil {
+	if err := m.DB.QueryRow(context.Background(), stmt, id).Scan(&s.ID, &s.Title, &s.Content, &s.Created, &s.Expires); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Snippet{}, ErrNoRecord
 		} else {
@@ -53,7 +56,7 @@ func (m *SnippetModel) Latest() ([]Snippet, error) {
 	stmt := `SELECT id, title, content, created, expires FROM snippets
 	         WHERE expires > (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
 	         ORDER BY id DESC LIMIT 10`
-	rs, err := m.DB.Query(stmt)
+	rs, err := m.DB.Query(context.Background(), stmt)
 	if err != nil {
 		return nil, err
 	}

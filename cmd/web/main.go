@@ -1,22 +1,26 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"flag"
 	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"markperea.com/snippetbox/internal/models"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/alexedwards/scs/pgxstore"
+	"github.com/alexedwards/scs/v2"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type application struct {
-	logger        *slog.Logger
-	snippets      *models.SnippetModel
-	templateCache map[string]*template.Template
+	logger         *slog.Logger
+	snippets       *models.SnippetModel
+	templateCache  map[string]*template.Template
+	sessionManager *scs.SessionManager
 }
 
 func main() {
@@ -39,10 +43,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	sessionManager := scs.New()
+	sessionManager.Store = pgxstore.New(db)
+	sessionManager.Lifetime = 12 * time.Hour
+
 	app := &application{
-		logger:        logger,
-		snippets:      &models.SnippetModel{DB: db},
-		templateCache: templateCache,
+		logger:         logger,
+		snippets:       &models.SnippetModel{DB: db},
+		templateCache:  templateCache,
+		sessionManager: sessionManager,
 	}
 
 	logger.Info("starting server", slog.String("addr", *addr))
@@ -52,17 +61,17 @@ func main() {
 	os.Exit(1)
 }
 
-func openDB(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("pgx", dsn)
+func openDB(dsn string) (*pgxpool.Pool, error) {
+	dbpool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	err = db.Ping()
+	err = dbpool.Ping(context.Background())
 	if err != nil {
-		db.Close()
+		dbpool.Close()
 		return nil, err
 	}
 
-	return db, nil
+	return dbpool, nil
 }
