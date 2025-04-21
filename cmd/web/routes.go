@@ -9,10 +9,10 @@ func (a *application) routes() http.Handler {
 
 	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
 
-	mux.HandleFunc("GET /{$}", a.home)
-	mux.HandleFunc("GET /snippet/view/{id}", a.snippetView)
-	mux.HandleFunc("GET /snippet/create", a.snippetCreate)
-	mux.HandleFunc("POST /snippet/create", a.snippetCreatePost)
+	mux.Handle("GET /{$}", a.sessionManager.LoadAndSave(http.HandlerFunc(a.home)))
+	mux.Handle("GET /snippet/view/{id}", a.sessionManager.LoadAndSave(http.HandlerFunc(a.snippetView)))
+	mux.Handle("GET /snippet/create", a.sessionManager.LoadAndSave(http.HandlerFunc(a.snippetCreate)))
+	mux.Handle("POST /snippet/create", a.sessionManager.LoadAndSave(http.HandlerFunc(a.snippetCreatePost)))
 
 	return a.recoverPanic(a.logRequest(commonHeaders(mux)))
 }
