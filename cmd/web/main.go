@@ -47,16 +47,22 @@ func main() {
 	sessionManager.Store = pgxstore.New(db)
 	sessionManager.Lifetime = 12 * time.Hour
 
-	app := &application{
+	a := &application{
 		logger:         logger,
 		snippets:       &models.SnippetModel{DB: db},
 		templateCache:  templateCache,
 		sessionManager: sessionManager,
 	}
 
-	logger.Info("starting server", slog.String("addr", *addr))
+	srv := &http.Server{
+		Addr:     *addr,
+		Handler:  a.routes(),
+		ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError),
+	}
 
-	err = http.ListenAndServe(*addr, app.routes())
+	logger.Info("starting server", slog.String("addr", srv.Addr))
+
+	err = srv.ListenAndServe()
 	logger.Error(err.Error())
 	os.Exit(1)
 }
