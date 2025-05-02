@@ -106,13 +106,9 @@ type userSignupForm struct {
 }
 
 func (a *application) userSignup(w http.ResponseWriter, r *http.Request) {
-	if a.isAuthenticated(r) {
-		http.Redirect(w, r, "/snippet/create", http.StatusSeeOther)
-	} else {
-		td := a.newTemplateData(r)
-		td.Form = userLoginForm{}
-		a.render(w, r, http.StatusOK, "signup.html", td)
-	}
+	td := a.newTemplateData(r)
+	td.Form = userSignupForm{}
+	a.render(w, r, http.StatusOK, "signup.html", td)
 }
 
 func (a *application) userSignupPost(w http.ResponseWriter, r *http.Request) {
@@ -165,13 +161,9 @@ type userLoginForm struct {
 }
 
 func (a *application) userLogin(w http.ResponseWriter, r *http.Request) {
-	if a.isAuthenticated(r) {
-		http.Redirect(w, r, "/snippet/create", http.StatusSeeOther)
-	} else {
-		td := a.newTemplateData(r)
-		td.Form = userLoginForm{}
-		a.render(w, r, http.StatusOK, "login.html", td)
-	}
+	td := a.newTemplateData(r)
+	td.Form = userLoginForm{}
+	a.render(w, r, http.StatusOK, "login.html", td)
 }
 
 func (a *application) userLoginPost(w http.ResponseWriter, r *http.Request) {
