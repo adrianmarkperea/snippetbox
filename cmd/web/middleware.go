@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/justinas/nosurf"
 )
 
 func commonHeaders(next http.Handler) http.Handler {
@@ -65,7 +67,7 @@ func (a *application) requireAuthentication(next http.Handler) http.Handler {
 func (a *application) requireUnauthenticated(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if a.isAuthenticated(r) {
-			a.sessionManager.Put(r.Context(), "flash", "You are already logged in")
+			a.sessionManager.Put(r.Context(), "flash", "User is currently logged in")
 
 			http.Redirect(w, r, "/snippet/create", http.StatusSeeOther)
 			return
@@ -73,4 +75,15 @@ func (a *application) requireUnauthenticated(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func noSurf(next http.Handler) http.Handler {
+	csrfHandler := nosurf.New(next)
+	csrfHandler.SetBaseCookie(http.Cookie{
+		HttpOnly: true,
+		Path:     "/",
+		Secure:   true,
+	})
+
+	return csrfHandler
 }

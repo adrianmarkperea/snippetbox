@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/justinas/nosurf"
 )
 
 func (a *application) serverError(w http.ResponseWriter, r *http.Request, err error) {
@@ -48,6 +50,7 @@ func (a *application) newTemplateData(r *http.Request) templateData {
 		CurrentYear:     time.Now().Year(),
 		Flash:           a.sessionManager.PopString(r.Context(), "flash"),
 		IsAuthenticated: a.isAuthenticated(r),
+		CSRFToken:       nosurf.Token(r),
 	}
 }
 
