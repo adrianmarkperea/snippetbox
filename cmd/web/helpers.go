@@ -45,7 +45,12 @@ func (a *application) render(w http.ResponseWriter, r *http.Request, status int,
 
 func (a *application) newTemplateData(r *http.Request) templateData {
 	return templateData{
-		CurrentYear: time.Now().Year(),
-		Flash:       a.sessionManager.PopString(r.Context(), "flash"),
+		CurrentYear:     time.Now().Year(),
+		Flash:           a.sessionManager.PopString(r.Context(), "flash"),
+		IsAuthenticated: a.isAuthenticated(r),
 	}
+}
+
+func (a *application) isAuthenticated(r *http.Request) bool {
+	return a.sessionManager.Exists(r.Context(), "authenticatedUserID")
 }
