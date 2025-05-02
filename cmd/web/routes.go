@@ -1,6 +1,10 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/justinas/alice"
+)
 
 func (a *application) routes() http.Handler {
 	mux := http.NewServeMux()
@@ -9,17 +13,25 @@ func (a *application) routes() http.Handler {
 
 	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
 
-	mux.Handle("GET /{$}", a.sessionManager.LoadAndSave(noSurf(http.HandlerFunc(a.home))))
+	dynamic := alice.New(a.sessionManager.LoadAndSave, noSurf, a.authenticate)
 
-	mux.Handle("GET /snippet/view/{id}", a.sessionManager.LoadAndSave(noSurf(http.HandlerFunc(a.snippetView))))
-	mux.Handle("GET /snippet/create", a.sessionManager.LoadAndSave(noSurf(a.requireAuthentication(http.HandlerFunc(a.snippetCreate)))))
-	mux.Handle("POST /snippet/create", a.sessionManager.LoadAndSave(noSurf(a.requireAuthentication(http.HandlerFunc(a.snippetCreatePost)))))
+	mux.Handle("GET /{$}", dynamic.ThenFunc(a.home))
+	mux.Handle("GET /snippet/view/{id}", dynamic.ThenFunc(a.snippetView))
 
-	mux.Handle("GET /user/signup", a.sessionManager.LoadAndSave(noSurf(a.requireUnauthenticated(http.HandlerFunc(a.userSignup)))))
-	mux.Handle("POST /user/signup", a.sessionManager.LoadAndSave(noSurf(a.requireUnauthenticated(http.HandlerFunc(a.userSignupPost)))))
-	mux.Handle("GET /user/login", a.sessionManager.LoadAndSave(noSurf(a.requireUnauthenticated(http.HandlerFunc(a.userLogin)))))
-	mux.Handle("POST /user/login", a.sessionManager.LoadAndSave(noSurf(a.requireUnauthenticated(http.HandlerFunc(a.userLoginPost)))))
-	mux.Handle("POST /user/logout", a.sessionManager.LoadAndSave(noSurf(a.requireAuthentication(http.HandlerFunc(a.userLogoutPost)))))
+	protected := dynamic.Append(a.requireAuthentication)
 
-	return a.recoverPanic(a.logRequest(commonHeaders(mux)))
+	mux.Handle("GET /snippet/create", protected.ThenFunc(a.snippetCreate))
+	mux.Handle("POST /snippet/create", protected.ThenFunc(a.snippetCreatePost))
+	mux.Handle("POST /user/logout", protected.ThenFunc(a.userLogoutPost))
+
+	loggedOutOnly := dynamic.Append(a.requireUnauthenticated)
+
+	mux.Handle("GET /user/signup", loggedOutOnly.ThenFunc(a.userSignup))
+	mux.Handle("POST /user/signup", loggedOutOnly.ThenFunc(a.userSignupPost))
+	mux.Handle("GET /user/login", loggedOutOnly.ThenFunc(a.userLogin))
+	mux.Handle("POST /user/login", loggedOutOnly.ThenFunc(a.userLoginPost))
+
+	standard := alice.New(a.recoverPanic, a.logRequest, commonHeaders)
+
+	return standard.Then(mux)
 }
