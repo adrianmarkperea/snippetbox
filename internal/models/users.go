@@ -12,6 +12,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type UserModelInterface interface {
+	Insert(name, email, password string) error
+	Authenticate(email, password string) (int, error)
+	Exists(id int) (bool, error)
+}
+
 const DEFAULT_HASH_COST = 12
 
 type User struct {
@@ -80,6 +86,4 @@ func (m *UserModel) Exists(id int) (bool, error) {
 	stmt := "SELECT EXISTS (SELECT true FROM users WHERE id = $1)"
 	err := m.DB.QueryRow(context.Background(), stmt, id).Scan(&exists)
 	return exists, err
-
-	return false, nil
 }
